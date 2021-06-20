@@ -1,0 +1,25 @@
+{
+  "name": "test-a-bit",
+  "version": "1.0.0",
+  "description": "Super simple NodeJS test tools for free-style testing and benchmarking at home.",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vovchisko/test-a-bit.git"
+  },
+  "keywords": [
+    "test",
+    "nodejs",
+    "benchmark"
+  ],
+  "author": "Volodymyr Ishchenko",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/vovchisko/test-a-bit/issues"
+  },
+  "homepage": "https://github.com/vovchisko/test-a-bit#readme"
+}
