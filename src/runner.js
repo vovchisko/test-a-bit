@@ -72,11 +72,21 @@ export async function runner (tests = [], silent = false) {
   let success = 0
   let fail = 0
   let timeout = 0
+  let no_result = 0
 
   results.forEach(t => {
-    if (t.result === SUCCESS) success++
-    if (t.result === FAIL) fail++
-    if (t.result === TIMEOUT) timeout++
+    switch (t.result) {
+      case SUCCESS:
+        success++
+        break
+      case TIMEOUT:
+        timeout++
+        break
+      case FAIL:
+      default:
+        fail++
+        break
+    }
   })
 
   console.log(``)
