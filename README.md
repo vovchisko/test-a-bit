@@ -9,7 +9,7 @@ Zero-dependency light weight testing & benchmarking tool for node-js.
 
 
 ### Installation
-```
+```Bash
 npm i test-a-bit --save-dev
 ```
 
@@ -17,7 +17,7 @@ npm i test-a-bit --save-dev
 
 Each test script running in a separate process. You can specify the timeout for each script.
 
-```NodeJS
+```JavaScript
 /* run_test.js */
 
 import { runner } from 'test-a-bit'
@@ -42,7 +42,7 @@ Set to `true` to suppress console output from console.log inside the tests.
 
 Runner returns Promise with results map like this:
 
-```
+```JavaScript
 [
   '12ebd1-9daf62-594cd5' => {
     uid: '12ebd1-9daf62-594cd5',
@@ -62,7 +62,7 @@ Runner returns Promise with results map like this:
 
 If you are lazy enough - just use `auto_runner` to automatically run all scripts in the specific folder.
 
-```NodeJS
+```JavaScript
 auto_runner('./tests/').then(results => console.log('bye'))
 ```
 
@@ -71,7 +71,7 @@ auto_runner('./tests/').then(results => console.log('bye'))
 
 Each test is a separated file that calls the `execute` method once with the test function. To indicate test result - run the `success` or `fail` function.
 
-```NodeJS
+```JavaScript
 /* tests/random-test.js */
 
 import { execute } from 'test-a-bit'
@@ -89,7 +89,7 @@ execute('sample fail test', (success, fail, is_runner) => {
 
 Possible output:
 
-```
+```Bash
 [fail]     sample fail test >> oh, no! / Δ=0.07ms
 ```
 
