@@ -23,5 +23,5 @@ export function microtime (unit) {
 
 export const FAIL = 'fail'
 export const SUCCESS = 'success'
-export const NO_RESULT = 'no_result'
+export const IN_ERR = 'error'
 export const TIMEOUT = 'timeout'

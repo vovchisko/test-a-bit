@@ -1,4 +1,3 @@
-
 # test-a-bit
 
 Zero-dependency light weight testing & benchmarking tool for node-js.
@@ -7,13 +6,15 @@ Zero-dependency light weight testing & benchmarking tool for node-js.
 > ### BEWARE!!!
 > This package is not ready for production, but still can be fun to use.
 
-
 ### Installation
+
 ```
 npm i test-a-bit --save-dev
 ```
 
-## runner(<tests_list>, [silent=false])
+## runner
+
+Call `runner(<test_scripts>, <options>)`
 
 Each test script running in a separate process. You can specify the timeout for each script.
 
@@ -26,8 +27,13 @@ runner([
   { script: './tests/success.js' },
   { script: './tests/fail.js' },
   { script: './tests/timeout.js', timeout: 200 },
-  { script: './tests/random.js', timeout: 200 },
-]).then(results => console.log(results, 'bye'))
+  { script: './tests/random.js', timeout: 200 , silent: false },
+],
+{
+  silent: false, // log or not process output by default
+  timeout: 1000, // default timeout 
+}
+).then(results => console.log(results, 'bye'))
 ```
 
 ### `<tests_list>`
@@ -66,10 +72,10 @@ If you are lazy enough - just use `auto_runner` to automatically run all scripts
 auto_runner('./tests/').then(results => console.log('bye'))
 ```
 
-
 ## Actual Test
 
-Each test is a separated file that calls the `execute` method once with the test function. To indicate test result - run the `success` or `fail` function.
+Each test is a separated file that calls the `execute` method once with the test function. To indicate test result - run
+the `success` or `fail` function.
 
 ```NodeJS
 /* tests/random-test.js */
@@ -112,6 +118,5 @@ Call this to mark test passed or failed respectively.
 ### `is_runner`
 
 Is this test was runner by a runner (along with other tests). Might be handy to decide if you need to spam the console.
-
 
 That's it. Have a fun! :3
