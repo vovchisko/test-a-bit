@@ -1,4 +1,3 @@
-
 # test-a-bit
 
 Zero-dependency light weight testing & benchmarking tool for node-js.
@@ -7,13 +6,15 @@ Zero-dependency light weight testing & benchmarking tool for node-js.
 > ### BEWARE!!!
 > This package is not ready for production, but still can be fun to use.
 
-
 ### Installation
+
 ```Bash
 npm i test-a-bit --save-dev
 ```
 
-## runner(<tests_list>, [silent=false])
+## runner
+
+Call `runner(<test_scripts>, <options>)`
 
 Each test script running in a separate process. You can specify the timeout for each script.
 
@@ -23,11 +24,16 @@ Each test script running in a separate process. You can specify the timeout for 
 import { runner } from 'test-a-bit'
 
 runner([
-  { script: './tests/success.js' },
-  { script: './tests/fail.js' },
-  { script: './tests/timeout.js', timeout: 200 },
-  { script: './tests/random.js', timeout: 200 },
-]).then(results => console.log(results, 'bye'))
+      { script: './tests/success.js' },
+      { script: './tests/fail.js' },
+      { script: './tests/timeout.js', timeout: 200 },
+      { script: './tests/random.js', timeout: 200, silent: false },
+    ],
+    {
+      silent: false, // log or not process output by default
+      timeout: 1000, // default timeout 
+    }
+).then(results => console.log(results, 'bye'))
 ```
 
 ### `<tests_list>`
@@ -42,9 +48,9 @@ Set to `true` to suppress console output from console.log inside the tests.
 
 Runner returns Promise with results map like this:
 
-```JavaScript
-[
-  '12ebd1-9daf62-594cd5' => {
+```JSON5
+{
+  '12ebd1-9daf62-594cd5': {
     uid: '12ebd1-9daf62-594cd5',
     name: 'sample fail test',
     note: 'oh, no!',
@@ -57,7 +63,7 @@ Runner returns Promise with results map like this:
     delta_precision_sym: 'ms',
     exit_code: 1
   }
-]
+}
 ```
 
 If you are lazy enough - just use `auto_runner` to automatically run all scripts in the specific folder.
@@ -66,10 +72,10 @@ If you are lazy enough - just use `auto_runner` to automatically run all scripts
 auto_runner('./tests/').then(results => console.log('bye'))
 ```
 
-
 ## Actual Test
 
-Each test is a separated file that calls the `execute` method once with the test function. To indicate test result - run the `success` or `fail` function.
+Each test is a separated file that calls the `execute` method once with the test function. To indicate test result - run
+the `success` or `fail` function.
 
 ```JavaScript
 /* tests/random-test.js */
@@ -78,12 +84,12 @@ import { execute } from 'test-a-bit'
 
 execute('sample fail test', (success, fail, is_runner) => {
   const rnd = Math.random()
-  
+
   if (!is_runner) console.log(`oh wow! rolled: rnd`)
-  
+
   success > 0.5
-    ? success('got lucky!')
-    : fail('oh, no!')
+      ? success('got lucky!')
+      : fail('oh, no!')
 })
 ```
 
@@ -112,6 +118,5 @@ Call this to mark test passed or failed respectively.
 ### `is_runner`
 
 Is this test was runner by a runner (along with other tests). Might be handy to decide if you need to spam the console.
-
 
 That's it. Have a fun! :3

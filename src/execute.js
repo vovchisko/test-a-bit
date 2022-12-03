@@ -1,4 +1,4 @@
-import { FAIL, microtime, NO_RESULT, SUCCESS } from './tools.js'
+import { FAIL, IN_ERR, microtime, SUCCESS } from './tools.js'
 
 const IS_RUNNER = Boolean(process.send)
 
@@ -14,7 +14,7 @@ const test = {
   name: 'Unnamed Test',
   note: '',
   delta: 0,
-  result: NO_RESULT,
+  result: IN_ERR,
 }
 
 const success = (note) => {
@@ -52,6 +52,16 @@ export function execute (name, f, delta_precision = 'milli') {
 
   start_time = microtime(test.delta_precision)
 
-  f(success, fail, IS_RUNNER)
+  //f(success, fail, IS_RUNNER)
+  const ff = (async () => {
+    try {
+      await f(success, fail, IS_RUNNER)
+    } catch (err) {
+      test.result = IN_ERR
+      complete(String(err))
+    }
+  })
+
+  ff().catch(err => console.error('ERR >>> ', err))
 }
 
