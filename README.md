@@ -8,7 +8,7 @@ Zero-dependency light weight testing & benchmarking tool for node-js.
 
 ### Installation
 
-```
+```Bash
 npm i test-a-bit --save-dev
 ```
 
@@ -18,21 +18,21 @@ Call `runner(<test_scripts>, <options>)`
 
 Each test script running in a separate process. You can specify the timeout for each script.
 
-```NodeJS
+```JavaScript
 /* run_test.js */
 
 import { runner } from 'test-a-bit'
 
 runner([
-  { script: './tests/success.js' },
-  { script: './tests/fail.js' },
-  { script: './tests/timeout.js', timeout: 200 },
-  { script: './tests/random.js', timeout: 200 , silent: false },
-],
-{
-  silent: false, // log or not process output by default
-  timeout: 1000, // default timeout 
-}
+      { script: './tests/success.js' },
+      { script: './tests/fail.js' },
+      { script: './tests/timeout.js', timeout: 200 },
+      { script: './tests/random.js', timeout: 200, silent: false },
+    ],
+    {
+      silent: false, // log or not process output by default
+      timeout: 1000, // default timeout 
+    }
 ).then(results => console.log(results, 'bye'))
 ```
 
@@ -48,9 +48,9 @@ Set to `true` to suppress console output from console.log inside the tests.
 
 Runner returns Promise with results map like this:
 
-```
-[
-  '12ebd1-9daf62-594cd5' => {
+```JSON5
+{
+  '12ebd1-9daf62-594cd5': {
     uid: '12ebd1-9daf62-594cd5',
     name: 'sample fail test',
     note: 'oh, no!',
@@ -63,12 +63,12 @@ Runner returns Promise with results map like this:
     delta_precision_sym: 'ms',
     exit_code: 1
   }
-]
+}
 ```
 
 If you are lazy enough - just use `auto_runner` to automatically run all scripts in the specific folder.
 
-```NodeJS
+```JavaScript
 auto_runner('./tests/').then(results => console.log('bye'))
 ```
 
@@ -77,25 +77,25 @@ auto_runner('./tests/').then(results => console.log('bye'))
 Each test is a separated file that calls the `execute` method once with the test function. To indicate test result - run
 the `success` or `fail` function.
 
-```NodeJS
+```JavaScript
 /* tests/random-test.js */
 
 import { execute } from 'test-a-bit'
 
 execute('sample fail test', (success, fail, is_runner) => {
   const rnd = Math.random()
-  
+
   if (!is_runner) console.log(`oh wow! rolled: rnd`)
-  
+
   success > 0.5
-    ? success('got lucky!')
-    : fail('oh, no!')
+      ? success('got lucky!')
+      : fail('oh, no!')
 })
 ```
 
 Possible output:
 
-```
+```Bash
 [fail]     sample fail test >> oh, no! / Δ=0.07ms
 ```
 
