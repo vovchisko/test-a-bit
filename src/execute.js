@@ -1,6 +1,6 @@
 import { FAIL, IN_ERR, microtime, SUCCESS } from './tools.js'
 
-const IS_RUNNER = Boolean(process.send)
+export const IS_RUNNER = Boolean(process.send)
 
 let exit_code = 1
 let start_time = 0
@@ -52,16 +52,13 @@ export function execute (name, f, delta_precision = 'milli') {
 
   start_time = microtime(test.delta_precision)
 
-  //f(success, fail, IS_RUNNER)
-  const ff = (async () => {
-    try {
-      await f(success, fail, IS_RUNNER)
-    } catch (err) {
-      test.result = IN_ERR
-      complete(String(err))
-    }
-  })
+  const ff = async () => {
+    await f(success, fail, IS_RUNNER)
+  }
 
-  ff().catch(err => console.error('ERR >>> ', err))
+  ff().catch(err => {
+    test.result = IN_ERR
+    complete(String(err))
+  })
 }
 

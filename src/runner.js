@@ -1,7 +1,7 @@
-import child_process                                     from 'child_process'
-import { FAIL, IN_ERR, low_grade_uid, SUCCESS, TIMEOUT } from './tools.js'
-import fs                                                from 'fs'
-import path                                              from 'path'
+import child_process                                              from 'child_process'
+import { FAIL, IN_ERR, make_test_id, NO_RESULT, SUCCESS, TIMEOUT } from './tools.js'
+import fs                                                         from 'fs'
+import path                                                       from 'path'
 
 export const results = new Map()
 
@@ -11,7 +11,6 @@ const pal_success = '\x1b[36m' // cyan, actual green = "\x1b[32m"
 const pal_dim = '\x1b[2m'
 const pal_error = '\x1b[31m'
 
-
 const DEF_TIMEOUT = 5000
 const DEF_SILENT = false
 
@@ -19,13 +18,13 @@ export function test (script, { timeout = DEF_TIMEOUT, silent = DEF_SILENT } = {
   return new Promise((resolve, reject) => {
 
     const curr = {
-      uid: low_grade_uid(),
+      uid: make_test_id(),
       name: script,
       note: '',
       timeout,
       script,
       silent,
-      result: IN_ERR,
+      result: NO_RESULT,
       delta: 0,
       delta_precision: '-',
       delta_precision_sym: '-',
@@ -33,20 +32,22 @@ export function test (script, { timeout = DEF_TIMEOUT, silent = DEF_SILENT } = {
       stop_ms: 0,
     }
 
+    let output = '',
+        countdown,
+        c
+
     results.set(curr.uid, curr)
 
-    const c = child_process.fork(script, { silent })
-    let output = '',
-        countdown
+    c = child_process.fork(script, { silent })
 
-    c.on('message', (status) => Object.assign(curr, status))
-
-    c.on('error', (err) => {
-      console.error(err)
-      reject()
+    c.on('message', (status) => {
+      Object.assign(curr, status)
+      curr.fullfilled = true
     })
 
-    c.on('exit', (code) => {
+    c.on('error', (err) => console.error('what could go wrong?', err))
+
+    c.on('exit', (code, err) => {
       curr.stop_ms = Date.now()
 
       if (timeout !== -1) {
@@ -64,6 +65,7 @@ export function test (script, { timeout = DEF_TIMEOUT, silent = DEF_SILENT } = {
           color = pal_fail
           break
         case IN_ERR:
+        case NO_RESULT:
           color = pal_error
           break
 
@@ -76,7 +78,7 @@ export function test (script, { timeout = DEF_TIMEOUT, silent = DEF_SILENT } = {
           : `Δt > ${ (curr.timeout) }ms `)
                     .padEnd(16, '^').replaceAll('^', pal_dim + '.' + pal_normal) + ' '
 
-      output += `(+fork: ${ curr.stop_ms - curr.start_ms }ms) `.padEnd(18, '^').replaceAll('^', pal_dim + '.' + pal_normal) + ' '
+      output += `(proc: ${ curr.stop_ms - curr.start_ms }ms) `.padEnd(18, '^').replaceAll('^', pal_dim + '.' + pal_normal) + ' '
 
       output += `${ curr.name || curr.script } ${ pal_dim }>>>${ pal_normal } ${ curr.note || `${ pal_dim }[no message]${ pal_normal }` }`
 
@@ -87,13 +89,13 @@ export function test (script, { timeout = DEF_TIMEOUT, silent = DEF_SILENT } = {
       resolve()
     })
 
-    if (timeout !== -1)
+    if (timeout !== -1) {
       countdown = setTimeout(() => {
         c.kill('SIGKILL')
         curr.result = TIMEOUT
       }, timeout)
+    }
   })
-
 }
 
 /**
@@ -104,7 +106,7 @@ export function test (script, { timeout = DEF_TIMEOUT, silent = DEF_SILENT } = {
  * @param {number} [options.timeout=1000]
  * @returns {Promise<Map<any, any>>}
  */
-export async function runner (entries, { timeout = DEF_TIMEOUT, silent = DEF_SILENT } = {}) {
+export async function runner (entries, { log = false, timeout = DEF_TIMEOUT, silent = DEF_SILENT } = {}) {
   const tests = entries.map(e => {
     if (typeof e === 'string') {
       return { script: e, silent, timeout }
@@ -122,12 +124,18 @@ export async function runner (entries, { timeout = DEF_TIMEOUT, silent = DEF_SIL
     await test(tests[i].script, { silent: tests[i].silent, timeout: tests[i].timeout })
   }
 
-  let total = tests.length
+  if (log) {
+    log_results()
+  }
+
+  return results
+}
+
+export function log_results () {
   let success = 0
   let fail = 0
   let error = 0
   let fail_timeout = 0
-  let no_result = 0
 
   results.forEach(t => {
     switch (t.result) {
@@ -147,16 +155,13 @@ export async function runner (entries, { timeout = DEF_TIMEOUT, silent = DEF_SIL
   })
 
   console.log(``)
-  console.log(`Executed ${ total } tests:`)
+  console.log(`Executed ${ results.size } tests:`)
   console.log(` - success : ${ wrap_if_non0(pal_success, success) }`)
   console.log(` - fail    : ${ wrap_if_non0(pal_fail, fail) }`)
   console.log(` - error   : ${ wrap_if_non0(pal_error, error) }`)
   console.log(` - timeout : ${ wrap_if_non0(pal_fail, fail_timeout) }`)
   console.log(``)
-
-  return results
 }
-
 
 export function pick_files (dir_path) {
   return fs
@@ -166,8 +171,8 @@ export function pick_files (dir_path) {
 
 }
 
-export async function auto_runner (dir_path, { timeout = DEF_TIMEOUT, silent = DEF_SILENT } = {}) {
-  return runner(pick_files(dir_path).map(script => ({ script, timeout, silent })))
+export async function auto_runner (dir_path, { log = false, timeout = DEF_TIMEOUT, silent = DEF_SILENT } = {}) {
+  return runner(pick_files(dir_path).map(script => ({ script, timeout, silent })), { log, timeout, silent })
 }
 
 function wrap_if_non0 (wrap, n) {
@@ -176,6 +181,6 @@ function wrap_if_non0 (wrap, n) {
       : pal_dim + n + pal_normal
 }
 
-export function reset () {
+export function flush_results () {
   results.clear()
 }

@@ -1,4 +1,4 @@
-export function low_grade_uid () {
+export function make_test_id () {
   return [
     Math.random,
     Date.now,
@@ -24,4 +24,5 @@ export function microtime (unit) {
 export const FAIL = 'fail'
 export const SUCCESS = 'success'
 export const IN_ERR = 'error'
+export const NO_RESULT = 'unknown'
 export const TIMEOUT = 'timeout'
