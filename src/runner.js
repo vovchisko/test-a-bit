@@ -3,6 +3,7 @@ import { FAIL, IN_ERR, make_test_id, NO_RESULT, SUCCESS, TIMEOUT } from './tools
 import fs                                                         from 'fs'
 import path                                                       from 'path'
 
+/** @type {Map<string, Object>} Global map storing test results */
 export const results = new Map()
 
 const pal_normal = '\x1b[0m'
@@ -11,9 +12,19 @@ const pal_success = '\x1b[36m' // cyan, actual green = "\x1b[32m"
 const pal_dim = '\x1b[2m'
 const pal_error = '\x1b[31m'
 
+/** Default timeout in milliseconds */
 const DEF_TIMEOUT = 5000
+/** Default silent mode setting */
 const DEF_SILENT = false
 
+/**
+ * Run a single test script in a separate process
+ * @param {string} script - Path to the test script
+ * @param {Object} options - Test options
+ * @param {number} [options.timeout=5000] - Timeout in milliseconds (-1 for no timeout)
+ * @param {boolean} [options.silent=false] - Suppress console output from test
+ * @returns {Promise<void>} Resolves when test completes
+ */
 export function test (script, { timeout = DEF_TIMEOUT, silent = DEF_SILENT } = {}) {
   return new Promise((resolve, reject) => {
 
@@ -99,12 +110,13 @@ export function test (script, { timeout = DEF_TIMEOUT, silent = DEF_SILENT } = {
 }
 
 /**
- *
- * @param {string[] | Object<silent,timeout>[]} entries
- * @param {object} options
- * @param {boolean} [options.silent=false]
- * @param {number} [options.timeout=1000]
- * @returns {Promise<Map<any, any>>}
+ * Run multiple test scripts in sequence
+ * @param {(string|Object)[]} entries - Array of test scripts or test configurations
+ * @param {Object} options - Runner options
+ * @param {boolean} [options.log=false] - Log results after completion
+ * @param {number} [options.timeout=5000] - Default timeout for tests
+ * @param {boolean} [options.silent=false] - Default silent mode for tests
+ * @returns {Promise<Map>} Map of test results
  */
 export async function runner (entries, { log = false, timeout = DEF_TIMEOUT, silent = DEF_SILENT } = {}) {
   const tests = entries.map(e => {
@@ -131,6 +143,9 @@ export async function runner (entries, { log = false, timeout = DEF_TIMEOUT, sil
   return results
 }
 
+/**
+ * Log a summary of test results to console
+ */
 export function log_results () {
   let success = 0
   let fail = 0
@@ -163,6 +178,11 @@ export function log_results () {
   console.log(``)
 }
 
+/**
+ * Get all JavaScript files from a directory
+ * @param {string} dir_path - Directory path to scan
+ * @returns {string[]} Array of absolute file paths
+ */
 export function pick_files (dir_path) {
   return fs
       .readdirSync(dir_path)
@@ -171,16 +191,35 @@ export function pick_files (dir_path) {
 
 }
 
+/**
+ * Automatically run all JavaScript files in a directory as tests
+ * @param {string} dir_path - Directory containing test files
+ * @param {Object} options - Runner options
+ * @param {boolean} [options.log=false] - Log results after completion
+ * @param {number} [options.timeout=5000] - Default timeout for tests
+ * @param {boolean} [options.silent=false] - Default silent mode for tests
+ * @returns {Promise<Map>} Map of test results
+ */
 export async function auto_runner (dir_path, { log = false, timeout = DEF_TIMEOUT, silent = DEF_SILENT } = {}) {
   return runner(pick_files(dir_path).map(script => ({ script, timeout, silent })), { log, timeout, silent })
 }
 
+/**
+ * Wrap a number with color if non-zero
+ * @param {string} wrap - ANSI color code
+ * @param {number} n - Number to wrap
+ * @returns {string} Colored string
+ * @private
+ */
 function wrap_if_non0 (wrap, n) {
   return n
       ? wrap + n + pal_normal
       : pal_dim + n + pal_normal
 }
 
+/**
+ * Clear all test results from memory
+ */
 export function flush_results () {
   results.clear()
 }

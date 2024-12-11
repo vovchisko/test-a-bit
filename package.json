@@ -1,7 +1,7 @@
 {
   "name": "test-a-bit",
   "version": "1.1.1",
-  "description": "Super simple NodeJS test tools for free-style testing and benchmarking at home.",
+  "description": "Zero-dependency light weight testing & benchmarking tool for node-js",
   "main": "index.js",
   "type": "module",
   "scripts": {
@@ -13,11 +13,16 @@
   },
   "keywords": [
     "test",
+    "testing",
+    "benchmark",
+    "benchmarking",
     "nodejs",
-    "benchmark"
+    "test-runner",
+    "zero-dependency",
+    "lightweight"
   ],
   "author": "Volodymyr Ishchenko",
-  "license": "ISC",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/vovchisko/test-a-bit/issues"
   },

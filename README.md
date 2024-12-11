@@ -2,121 +2,146 @@
 
 Zero-dependency light weight testing & benchmarking tool for node-js.
 
+## Features
 
-> ### BEWARE!!!
-> This package is not ready for production, but still can be fun to use.
+- ✅ It's really simple.
+- ✅ Individual test isolation
+- ✅ Test startup and execution time in vacuum
 
-### Installation
+## Why?
 
-```Bash
+For non-conventional testing, of course.
+
+## Installation
+
+```bash
 npm i test-a-bit --save-dev
 ```
 
-## runner
+## Usage
 
-Call `runner(<test_scripts>, <options>)`
+### Single Test
 
-Each test script running in a separate process. You can specify the timeout for each script.
-
-```JavaScript
-/* run_test.js */
-
-import { runner } from 'test-a-bit'
-
-runner([
-      { script: './tests/success.js' },
-      { script: './tests/fail.js' },
-      { script: './tests/timeout.js', timeout: 200 },
-      { script: './tests/random.js', timeout: 200, silent: false },
-    ],
-    {
-      silent: false, // log or not process output by default
-      timeout: 1000, // default timeout 
-    }
-).then(results => console.log(results, 'bye'))
-```
-
-### `<tests_list>`
-
-List of objects with `script` and `timeout`.
-
-### `[silent=false]`
-
-Set to `true` to suppress console output from console.log inside the tests.
-
-### `results`
-
-Runner returns Promise with results map like this:
-
-```JSON5
-{
-  '12ebd1-9daf62-594cd5': {
-    uid: '12ebd1-9daf62-594cd5',
-    name: 'sample fail test',
-    note: 'oh, no!',
-    timeout: 200,
-    script: './tests/random.js',
-    silent: false,
-    result: 'fail',
-    delta: 0.09140002727508545,
-    delta_precision: 'milli',
-    delta_precision_sym: 'ms',
-    exit_code: 1
-  }
-}
-```
-
-If you are lazy enough - just use `auto_runner` to automatically run all scripts in the specific folder.
-
-```JavaScript
-auto_runner('./tests/').then(results => console.log('bye'))
-```
-
-## Actual Test
-
-Each test is a separated file that calls the `execute` method once with the test function. To indicate test result - run
-the `success` or `fail` function.
-
-```JavaScript
-/* tests/random-test.js */
-
+```javascript
 import { execute } from 'test-a-bit'
 
-execute('sample fail test', (success, fail, is_runner) => {
-  const rnd = Math.random()
-
-  if (!is_runner) console.log(`oh wow! rolled: rnd`)
-
-  success > 0.5
-      ? success('got lucky!')
-      : fail('oh, no!')
+execute('my test', (success, fail, isRunner) => {
+  if (someCondition) {
+    success('test passed!')
+  } else {
+    fail('test failed!')
+  }
 })
 ```
 
-Possible output:
+### Running Multiple Tests
 
-```Bash
-[fail]     sample fail test >> oh, no! / Δ=0.07ms
+```javascript
+import { runner } from 'test-a-bit'
+
+await runner([
+  { script: './tests/success.js' },
+  { script: './tests/fail.js' },
+  { script: './tests/timeout.js', timeout: 200 },
+  { script: './tests/random.js', timeout: 200 },
+], {
+  timeout: 1000, // default timeout in milliseconds
+})
 ```
 
-## `execute(<name>, <callback>)`
+### Auto-Discovery Runner
 
-`<name>` - Is a string - will be passed to the output.
+```javascript
+import { auto_runner } from 'test-a-bit'
 
-`<callback>` - Callback Function with your test inside.
+await auto_runner('./tests/', { timeout: 1000 })
+```
 
-### Callback Arguments
+### Debugging Tests
 
-Callback function has 3 arguments: result functions `success` & `fail`, and `is_runner` flag.
+When debugging tests, you can:
 
-### `fail([note])` & `success([note])`
+1. Run a single test with output:
+```javascript
+// test-debug.js
+execute('debug test', (success, fail) => {
+  console.log('Debug value:', someValue)
+  someAsyncOperation()
+    .then(result => {
+      console.log('Operation result:', result)
+      success('all good')
+    })
+    .catch(err => {
+      console.error('Failed:', err)
+      fail(err.message)
+    })
+})
+```
 
-Call this to mark test passed or failed respectively.
+2. Enable output for specific tests in a suite:
+```javascript
+await runner([
+  { script: './tests/normal.js' },
+  { script: './tests/debug-this.js', silent: false }, // only this test shows output
+  { script: './tests/also-debug.js', silent: false },
+], { silent: true })
+```
 
-`note` - string, will be passed to the output.
+3. Temporarily enable all output:
+```javascript
+// Show all console output while debugging
+await auto_runner('./tests/', { silent: false })
+```
 
-### `is_runner`
+## API Reference
 
-Is this test was runner by a runner (along with other tests). Might be handy to decide if you need to spam the console.
+### `execute(name, testFn, [precision])`
 
-That's it. Have a fun! :3
+Runs a single test.
+
+- `name`: Test name (string)
+- `testFn`: Test function `(success, fail, isRunner) => void`
+- `precision`: Time measurement precision ('milli', 'micro', 'nano')
+
+### `runner(tests, options)`
+
+Runs multiple tests in sequence.
+
+- `tests`: Array of test configurations
+  - `script`: Path to test file
+  - `timeout`: Test timeout in ms (-1 for no timeout)
+  - `silent`: Control test's console output
+- `options`:
+  - `timeout`: Default timeout
+  - `silent`: Control console output from all tests
+  - `log`: Log results after completion
+
+### `auto_runner(directory, options)`
+
+Automatically discovers and runs tests in a directory.
+
+- `directory`: Path to test directory
+- `options`: Same as runner options
+
+## Implementation Details
+
+#### Process Isolation
+Each test runs in a separate Node.js process to ensure complete isolation.
+
+#### Silent Mode
+Controls whether test console output (console.log, console.error) is shown:
+- `silent: true` - Suppresses test output
+- `silent: false` - Shows test output
+- Can be set globally or per test
+- Test results always shown
+
+## TODO
+
+- [ ] Parallel test execution support - Run multiple tests simultaneously for faster execution in multi-core environments
+
+## License
+
+[MIT License](LICENSE) - feel free to use this project commercially.
+
+---
+With love ❤️ from Ukraine 🇺🇦
