@@ -14,8 +14,10 @@ const pal_error = '\x1b[31m'
 
 /** Default timeout in milliseconds */
 const DEF_TIMEOUT = 5000
-/** Default silent mode setting */
-const DEF_SILENT = false
+/** Default silent mode setting - changed to true */
+const DEF_SILENT = true
+/** Default hard break setting */
+const DEF_HARD_BREAK = false
 
 /**
  * Run a single test script in a separate process
@@ -25,7 +27,7 @@ const DEF_SILENT = false
  * @param {boolean} [options.silent=false] - Suppress console output from test
  * @returns {Promise<void>} Resolves when test completes
  */
-export function test (script, { timeout = DEF_TIMEOUT, silent = DEF_SILENT } = {}) {
+export function test (script, { timeout = DEF_TIMEOUT, silent = DEF_SILENT, hard_break = DEF_HARD_BREAK } = {}) {
   return new Promise((resolve, reject) => {
 
     const curr = {
@@ -49,18 +51,42 @@ export function test (script, { timeout = DEF_TIMEOUT, silent = DEF_SILENT } = {
 
     results.set(curr.uid, curr)
 
-    c = child_process.fork(script, { silent })
+    c = child_process.fork(script, { silent: true })
+
+    let output_buffer = []
+    let error_buffer = []
+
+    c.stdout?.on('data', (data) => {
+      output_buffer.push(data.toString())
+    })
+
+    c.stderr?.on('data', (data) => {
+      error_buffer.push(data.toString())
+    })
 
     c.on('message', (status) => {
       Object.assign(curr, status)
       curr.fullfilled = true
     })
 
-    c.on('error', (err) => console.error('what could go wrong?', err))
+    // Improve error handling
+    c.on('error', (err) => {
+      curr.result = IN_ERR
+      curr.note = String(err)
+      if (!silent) {
+        console.error('Process error:', err)
+      }
+    })
 
     c.on('exit', (code, err) => {
       curr.stop_ms = Date.now()
 
+      if (code !== 0 && !curr.fullfilled) {
+        curr.result = IN_ERR
+        curr.note = 'Process terminated with unhandled error'
+      }
+
+      // Format the output but don't log it yet
       if (timeout !== -1) {
         clearTimeout(countdown)
       }
@@ -79,23 +105,36 @@ export function test (script, { timeout = DEF_TIMEOUT, silent = DEF_SILENT } = {
         case NO_RESULT:
           color = pal_error
           break
-
       }
 
-      output += `${ color }${ curr.result }${ pal_normal }`.padEnd(16 + color.length, ' ')
-
+      output += `${color}${curr.result}${pal_normal}`.padEnd(16 + color.length, ' ')
       output += (curr.result !== TIMEOUT
-          ? `Δt = ${ (curr.delta).toFixed(2) }${ curr.delta_precision_sym } `
-          : `Δt > ${ (curr.timeout) }ms `)
-                    .padEnd(16, '^').replaceAll('^', pal_dim + '.' + pal_normal) + ' '
-
-      output += `(proc: ${ curr.stop_ms - curr.start_ms }ms) `.padEnd(18, '^').replaceAll('^', pal_dim + '.' + pal_normal) + ' '
-
-      output += `${ curr.name || curr.script } ${ pal_dim }>>>${ pal_normal } ${ curr.note || `${ pal_dim }[no message]${ pal_normal }` }`
+        ? `Δt = ${(curr.delta).toFixed(2)}${curr.delta_precision_sym} `
+        : `Δt > ${(curr.timeout)}ms `)
+        .padEnd(16, '^').replaceAll('^', pal_dim + '.' + pal_normal) + ' '
+      output += `(proc: ${curr.stop_ms - curr.start_ms}ms) `.padEnd(18, '^').replaceAll('^', pal_dim + '.' + pal_normal) + ' '
+      output += `${curr.name || curr.script} ${pal_dim}>>>${pal_normal} ${curr.note || `${pal_dim}[no message]${pal_normal}`}`
 
       curr.exit_code = code
 
+      // Always log the test status line first
       console.log(output)
+
+      // Show error output for both silent=false and hard_break cases
+      if ((curr.result === IN_ERR || curr.result === FAIL) && (hard_break || !silent)) {
+        // Show stdout first
+        if (output_buffer.length) {
+          console.log(output_buffer.join(''))
+        }
+        // Then show error output
+        if (error_buffer.length) {
+          console.error(error_buffer.join(''))
+        }
+
+        if (hard_break) {
+          process.exit(1)
+        }
+      }
 
       resolve()
     })
@@ -118,22 +157,34 @@ export function test (script, { timeout = DEF_TIMEOUT, silent = DEF_SILENT } = {
  * @param {boolean} [options.silent=false] - Default silent mode for tests
  * @returns {Promise<Map>} Map of test results
  */
-export async function runner (entries, { log = false, timeout = DEF_TIMEOUT, silent = DEF_SILENT } = {}) {
+export async function runner (entries, { log = false, timeout = DEF_TIMEOUT, silent = DEF_SILENT, hard_break = DEF_HARD_BREAK } = {}) {
   const tests = entries.map(e => {
     if (typeof e === 'string') {
-      return { script: e, silent, timeout }
+      return { script: e, silent, timeout, hard_break }
     }
     if (typeof e === 'object') {
       return {
         script: e.script,
         silent: typeof e.silent === 'boolean' ? e.silent : silent,
         timeout: typeof e.timeout === 'number' ? e.timeout : timeout,
+        hard_break: typeof e.hard_break === 'boolean' ? e.hard_break : hard_break
       }
     }
   })
 
-  for (let i = 0; i < tests.length; i++) {
-    await test(tests[i].script, { silent: tests[i].silent, timeout: tests[i].timeout })
+  try {
+    for (let i = 0; i < tests.length; i++) {
+      await test(tests[i].script, { 
+        silent: tests[i].silent, 
+        timeout: tests[i].timeout,
+        hard_break: tests[i].hard_break 
+      })
+    }
+  } catch (err) {
+    if (log) {
+      log_results()
+    }
+    throw err
   }
 
   if (log) {
@@ -200,8 +251,11 @@ export function pick_files (dir_path) {
  * @param {boolean} [options.silent=false] - Default silent mode for tests
  * @returns {Promise<Map>} Map of test results
  */
-export async function auto_runner (dir_path, { log = false, timeout = DEF_TIMEOUT, silent = DEF_SILENT } = {}) {
-  return runner(pick_files(dir_path).map(script => ({ script, timeout, silent })), { log, timeout, silent })
+export async function auto_runner (dir_path, { log = false, timeout = DEF_TIMEOUT, silent = DEF_SILENT, hard_break = DEF_HARD_BREAK } = {}) {
+  return runner(
+    pick_files(dir_path).map(script => ({ script, timeout, silent, hard_break })), 
+    { log, timeout, silent, hard_break }
+  )
 }
 
 /**

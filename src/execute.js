@@ -6,6 +6,13 @@ import { FAIL, IN_ERR, microtime, SUCCESS } from './tools.js'
  */
 export const IS_RUNNER = Boolean(process.send)
 
+// Add unhandled rejection handler
+if (!IS_RUNNER) {
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection:', reason)
+  })
+}
+
 let exit_code = 1
 let start_time = 0
 let time_sym = {
@@ -75,16 +82,24 @@ export function execute (name, f, delta_precision = 'milli') {
   test.delta_precision = delta_precision
   test.delta_precision_sym = time_sym[delta_precision]
 
-  if (IS_RUNNER)
+  if (IS_RUNNER) {
     process.send(test)
+  }
 
   start_time = microtime(test.delta_precision)
 
   const ff = async () => {
-    await f(success, fail, IS_RUNNER)
+    try {
+      await f(success, fail, IS_RUNNER)
+    } catch (err) {
+        console.error(err)
+      test.result = IN_ERR
+      complete(String(err))
+    }
   }
 
   ff().catch(err => {
+      console.error(err)
     test.result = IN_ERR
     complete(String(err))
   })

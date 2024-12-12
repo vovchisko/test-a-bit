@@ -7,6 +7,8 @@ Zero-dependency light weight testing & benchmarking tool for node-js.
 - ✅ It's really simple.
 - ✅ Individual test isolation
 - ✅ Test startup and execution time in vacuum
+- ✅ Actual stacktraces
+- ✅ Zero dependencies
 
 ## Why?
 
@@ -18,103 +20,130 @@ For non-conventional testing, of course.
 npm i test-a-bit --save-dev
 ```
 
-## Usage
+## Writing Tests
 
-### Single Test
+Each test file should use `execute` function to define a single test:
 
 ```javascript
 import { execute } from 'test-a-bit'
 
-execute('my test', (success, fail, isRunner) => {
+// One execute per test file
+execute('my test', (success, fail) => {
+  // Your test logic here
   if (someCondition) {
-    success('test passed!')
+    success('test passed!') // Resolves test immediately
   } else {
-    fail('test failed!')
+    fail('test failed!')    // Resolves test immediately
+  }
+})
+
+// Async example
+execute('async test', async (success, fail) => {
+  try {
+    const result = await someOperation()
+    success('all good')  // Resolves test
+  } catch (err) {
+    fail(err.message)    // Resolves test with failure
   }
 })
 ```
 
-### Running Multiple Tests
+## Running Tests
 
+There are several ways to run your tests:
+
+### Direct Node Execution
+
+Run a single test file directly:
+```bash
+node tests/my-test.js
+```
+
+### Test Runner
+
+Run multiple test files with specific options:
 ```javascript
 import { runner } from 'test-a-bit'
 
 await runner([
-  { script: './tests/success.js' },
-  { script: './tests/fail.js' },
-  { script: './tests/timeout.js', timeout: 200 },
-  { script: './tests/random.js', timeout: 200 },
-], {
-  timeout: 1000, // default timeout in milliseconds
-})
+  { script: './tests/first.js' },
+  { script: './tests/second.js', timeout: 1000 },
+  { script: './tests/debug.js', silent: false }, // show console output
+])
 ```
 
-### Auto-Discovery Runner
+### Auto-Discovery
 
+Automatically find and run all tests in a directory:
 ```javascript
 import { auto_runner } from 'test-a-bit'
 
 await auto_runner('./tests/', { timeout: 1000 })
 ```
 
-### Debugging Tests
+## Advanced Features
 
-When debugging tests, you can:
+### Output Control
 
-1. Run a single test with output:
+Control console output visibility:
 ```javascript
-// test-debug.js
-execute('debug test', (success, fail) => {
-  console.log('Debug value:', someValue)
-  someAsyncOperation()
-    .then(result => {
-      console.log('Operation result:', result)
-      success('all good')
-    })
-    .catch(err => {
-      console.error('Failed:', err)
-      fail(err.message)
-    })
-})
+// Global silent mode (default: true)
+await runner(tests, { silent: true })
+
+// Per-test silent mode
+await runner([
+  { script: './test1.js', silent: false }, // show output
+  { script: './test2.js' }, // inherit global silent setting
+])
 ```
 
-2. Enable output for specific tests in a suite:
+### Hard Break Mode
+
+Stop execution immediately when a test fails:
 ```javascript
 await runner([
-  { script: './tests/normal.js' },
-  { script: './tests/debug-this.js', silent: false }, // only this test shows output
-  { script: './tests/also-debug.js', silent: false },
-], { silent: true })
+  { script: './test1.js' },
+  { script: './test2.js', hard_break: true }, // break if this fails
+  { script: './test3.js' }, // won't run if test2 fails
+], { hard_break: false }) // global setting
 ```
 
-3. Temporarily enable all output:
+### Timeout Control
+
 ```javascript
-// Show all console output while debugging
-await auto_runner('./tests/', { silent: false })
+await runner([
+  { script: './quick.js', timeout: 100 },
+  { script: './slow.js', timeout: 5000 },
+  { script: './infinite.js', timeout: -1 }, // no timeout
+])
 ```
 
 ## API Reference
 
 ### `execute(name, testFn, [precision])`
 
-Runs a single test.
+Defines a single test. Use one per test file.
 
 - `name`: Test name (string)
-- `testFn`: Test function `(success, fail, isRunner) => void`
+- `testFn`: Test function `(success, fail) => void`
+  - `success(message)`: Call to pass the test (resolves immediately)
+  - `fail(message)`: Call to fail the test (resolves immediately)
 - `precision`: Time measurement precision ('milli', 'micro', 'nano')
 
 ### `runner(tests, options)`
 
-Runs multiple tests in sequence.
+Runs multiple test files in sequence.
 
 - `tests`: Array of test configurations
   - `script`: Path to test file
   - `timeout`: Test timeout in ms (-1 for no timeout)
   - `silent`: Control test's console output
+  - `hard_break`: Stop execution on test failure
 - `options`:
-  - `timeout`: Default timeout
-  - `silent`: Control console output from all tests
-  - `log`: Log results after completion
+  - `timeout`: Default timeout (default: 5000ms)
+  - `silent`: Control console output (default: true)
+  - `hard_break`: Stop on first failure (default: false)
+  - `log`: Show summary after completion
 
 ### `auto_runner(directory, options)`
 
@@ -122,22 +151,6 @@ Automatically discovers and runs tests in a directory.
 
 - `directory`: Path to test directory
 - `options`: Same as runner options
-
-## Implementation Details
-
-#### Process Isolation
-Each test runs in a separate Node.js process to ensure complete isolation.
-
-#### Silent Mode
-Controls whether test console output (console.log, console.error) is shown:
-- `silent: true` - Suppresses test output
-- `silent: false` - Shows test output
-- Can be set globally or per test
-- Test results always shown
-
-## TODO
-
-- [ ] Parallel test execution support - Run multiple tests simultaneously for faster execution in multi-core environments
 
 ## License
 
