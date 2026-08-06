@@ -1,4 +1,20 @@
-export { microtime }                                                         from './src/tools.js'
-export { execute, IS_RUNNER }                                                from './src/execute.js'
-export { runner, auto_runner, test, pick_files, log_results, flush_results } from './src/runner.js'
-
+export { execute, IS_RUNNER }                            from './src/execute.js'
+export {
+  auto_runner,
+  flush_results,
+  get_summary,
+  log_results,
+  pick_files,
+  results,
+  runner,
+  test,
+}                                                        from './src/runner.js'
+export {
+  FAIL,
+  FAILED,
+  IN_ERR,
+  NO_RESULT,
+  SUCCESS,
+  TIMEOUT,
+  microtime,
+}                                                        from './src/tools.js'

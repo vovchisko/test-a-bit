@@ -1,33 +1,47 @@
+import { randomUUID } from 'node:crypto'
+
+/** @type {Object<string, number>} Nanoseconds per unit */
+export const TIME_DIV = {
+  milli: 1e6,
+  micro: 1e3,
+  nano: 1,
+}
+
+/** @type {Object<string, string>} Display symbol per unit */
+export const TIME_SYM = {
+  milli: 'ms',
+  micro: 'μs',
+  nano: 'ns',
+}
+
+/** Default time precision used when none (or an unknown one) is given */
+export const DEF_PRECISION = 'milli'
+
 /**
- * Generates a unique test identifier using random values and timestamp
- * @returns {string} A hyphen-separated string of hexadecimal values
+ * Normalize a precision name, falling back to the default for unknown values
+ * @param {string} [unit]
+ * @returns {'milli'|'micro'|'nano'}
  */
-export function make_test_id () {
-  return [
-    Math.random,
-    Date.now,
-    Math.random,
-  ].map(function (fn) {
-    return fn().toString(16 || (16 + (Math.random() * 20))).substr(-6)
-  }).join('-')
+export function precision (unit) {
+  return TIME_DIV[unit] ? unit : DEF_PRECISION
 }
 
 /**
- * Get high-resolution time in specified precision
- * @param {'milli'|'micro'|'nano'} unit - Time unit precision
- * @returns {number} Time value in specified unit
+ * Generates a unique test identifier
+ * @returns {string} UUID v4
+ */
+export function make_test_id () {
+  return randomUUID()
+}
+
+/**
+ * High-resolution timestamp in the given precision. Only meaningful as a
+ * difference between two calls — the origin is arbitrary.
+ * @param {'milli'|'micro'|'nano'} [unit='milli'] - Time unit precision
+ * @returns {number} Time value in the requested unit
  */
 export function microtime (unit) {
-  const hrTime = process.hrtime()
-  switch (unit) {
-    case 'milli':
-      return hrTime[0] * 1000 + hrTime[1] / 1000000
-    case 'micro':
-      return hrTime[0] * 1000000 + hrTime[1] / 1000
-    case 'nano':
-    default:
-      return hrTime[0] * 1000000000 + hrTime[1]
-  }
+  return Number(process.hrtime.bigint()) / TIME_DIV[precision(unit)]
 }
 
 /** @type {string} Test result: Test failed */
@@ -40,3 +54,6 @@ export const IN_ERR = 'error'
 export const NO_RESULT = 'unknown'
 /** @type {string} Test result: Test timed out */
 export const TIMEOUT = 'timeout'
+
+/** @type {Set<string>} Every result that is not a pass */
+export const FAILED = new Set([FAIL, IN_ERR, NO_RESULT, TIMEOUT])
