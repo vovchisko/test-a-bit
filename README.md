@@ -1,5 +1,8 @@
 # test-a-bit
 
+> The package is no longer supported.
+> Node.js has it all by now, so this package no longer needed.
+
 Zero-dependency light weight testing & benchmarking tool for node-js.
 
 ## Features
